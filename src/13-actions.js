@@ -94,7 +94,7 @@ function doDash(){
   P.dashCd=1.25;P.invuln=Math.max(P.invuln,P.dashT+.12);sfx('dash');vib(15);
 }
 function hurt(dmg){
-  if(P.invuln>0||P.dead||state!=='playing')return;
+  if(P.invuln>0||P.dead||state!=="playing"||window.__god)return;
   const ab=Math.min(P.armor,dmg*.5);P.armor-=ab;P.hp-=dmg-ab;
   P.vig=Math.min(1,P.vig+dmg/28);shake=Math.max(shake,.3);sfx('hurt');vib(35);
   if(P.hp<=0){P.hp=0;die()}

@@ -27,7 +27,7 @@ function startStory(fresh){
   audioInit();goFull();
   const go=()=>{enterMode('story');clearWorld();score=0;kills=0;chain=0;mult=1;time=0;diff=1.08;storyBegin(fresh);
     const l=$('loading');if(l)l.remove()};
-  if(!WORLDS.story){const l=document.createElement('div');l.id='loading';l.textContent='Долина Пепла пробуждается…';document.body.append(l);hideScreens();setTimeout(()=>{WORLDS.story=buildStory();go()},40)}
+  if(!WORLDS.story){const l=document.createElement('div');l.id='loading';l.textContent='Долина Пепла пробуждается…';document.body.append(l);hideScreens();setTimeout(()=>{WORLDS.story=buildStory();const prev=WORLD;setWorld(WORLDS.story);try{renderer.compile(scene,camera)}catch(e){}setWorld(prev);go()},40)}
   else go();
 }
 function hideScreens(){for(const id of ['title','pause','over','settings'])$(id).hidden=true}

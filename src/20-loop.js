@@ -11,6 +11,7 @@ function tuneResolution(){
 function frame(now){
   requestAnimationFrame(frame);
   if(settings.fps30&&now-last<31)return;
+  const c0=performance.now();
   const rdt=Math.min(.05,(now-last)/1000);last=now;
   fpsAcc+=rdt;fpsN++;
   if(fpsAcc>3){fpsLast=fpsN/fpsAcc;fpsAcc=0;fpsN=0;tuneResolution()}
@@ -37,12 +38,24 @@ function frame(now){
   const vmOn=state!=='title';
   if(post)post.render(vmOn);
   else{renderer.setRenderTarget(null);renderer.clear();renderer.render(scene,camera);if(vmOn){renderer.clearDepth();renderer.render(vmScene,vmCam)}}
+  CPU.push(performance.now()-c0);if(CPU.length>600)CPU.shift();
 }
+const CPU=[],KEEP=[];
+// Compile every shader up front (all enemy types, viewmodel, effects) so the first spawn or shot never stalls the frame.
+function prewarm(){
+  const tmp=[];for(const t in TYPES){const e=makeEnemy(t,0,-30);e.pos.y=0;e.g.visible=true;tmp.push(e)}
+  const vis=[vm.shred.visible,vm.shot.visible,vm.shield.visible,vm.flail.visible,vm.mf.visible];vm.shred.visible=vm.shot.visible=vm.shield.visible=vm.flail.visible=vm.mf.visible=true;
+  const wm=waveMesh();try{renderer.compile(scene,camera);renderer.compile(vmScene,vmCam)}catch(e){}
+  // the warm-up materials are kept alive on purpose: disposing the last user of a shader makes three.js delete the program
+  scene.remove(wm);KEEP.push(wm.material);for(const e of tmp){scene.remove(e.g);KEEP.push(e.mat)}enemies=enemies.filter(e=>!tmp.includes(e));
+  [vm.shred.visible,vm.shot.visible,vm.shield.visible,vm.flail.visible,vm.mf.visible]=vis;
+}
+
 setWorld(WORLDS.arena);resetPlayer();
-demoScene();updBest();
+prewarm();demoScene();updBest();
 $('loading').remove();$('title').hidden=false;
 requestAnimationFrame(frame);
 if(location.hash==='#autoplay')startGame();
 if(location.hash==='#story')startStory(true);
-window.__palach={get state(){return state},get mode(){return mode},P,W,get STORY(){return STORY},enemies:()=>enemies,startGame,startStory,spawnPortal,get fps(){return fpsLast},get quality(){return QUAL},get res(){return resScale},
+window.__palach={get state(){return state},get mode(){return mode},P,W,get STORY(){return STORY},enemies:()=>enemies,startGame,startStory,spawnPortal,get fps(){return fpsLast},get quality(){return QUAL},get res(){return resScale},cpu:()=>CPU.splice(0),setRes:v=>{resScale=v;applyRes()},
   get music(){return Object.keys(AU.tracks).map(k=>k+':'+AU.tracks[k].a.readyState+(AU.tracks[k].failed?'F':'')+(AU.tracks[k].a.paused?'p':'P'))},skipTo:q=>storySkipTo(q),kill:e=>damageEnemy(e,99999,'gun',null)};
