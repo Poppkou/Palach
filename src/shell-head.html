@@ -1,0 +1,244 @@
+<title>Железный Палач</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0908">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Ruslan+Display&display=swap">
+<style>
+/* Layout: one full-bleed canvas, HUD pinned to the safe-area corners, controls under the thumbs */
+:root{
+  --iron:#120d0c; --plate:rgba(24,16,14,.72); --rim:#6b4a36;
+  --ember:#ff7a1a; --blood:#c4121c; --bone:#eadfc8; --ash:#9c8a7e;
+  --parry:#62ff7e; --gold:#ffc43d; --steel:#7fc8ff;
+  --display:'Ruslan Display','Georgia','Times New Roman',serif;
+  --ui:'Oswald','Arial Narrow','Roboto Condensed',sans-serif;
+  --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px);
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--iron);color:var(--bone);font-family:var(--ui);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+#game.menu .hud,#game.menu #touch,#game.dlg .hud,#game.dlg #touch{display:none!important}
+#game{position:fixed;inset:0;touch-action:none;overflow:hidden;background:#0b0706}
+#c{display:block;width:100%;height:100%}
+.hud{position:absolute;pointer-events:none}
+#topL{top:calc(10px + var(--st));left:calc(14px + var(--sl));display:flex;flex-direction:column;gap:2px}
+#wave{font-family:var(--display);font-size:20px;letter-spacing:.06em;color:var(--ember);text-shadow:0 0 12px rgba(255,90,20,.6),0 2px 0 #000}
+#score{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
+#combo{font-size:15px;font-weight:600;color:var(--gold);letter-spacing:.08em;text-shadow:0 2px 0 #000;opacity:0;transition:opacity .2s}
+#topR{top:calc(10px + var(--st));right:calc(14px + var(--sr));display:flex;gap:10px;pointer-events:auto}
+.chip{font-family:var(--ui);background:var(--plate);border:1px solid var(--rim);color:var(--bone);border-radius:6px;padding:6px 12px;font-size:14px;letter-spacing:.08em;font-weight:600}
+#bottomC{bottom:calc(12px + var(--sb));left:50%;transform:translateX(-50%);width:min(340px,40vw);display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.bar{height:12px;background:rgba(0,0,0,.55);border:1px solid #3a2a24;border-radius:2px;overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0;transform-origin:left;transition:transform .12s}
+#hpBar i{background:linear-gradient(90deg,#7a0a10,var(--blood) 60%,#ff4a3a)}
+#arBar{height:7px}
+#arBar i{background:linear-gradient(90deg,#8a6a10,var(--gold))}
+.row{display:flex;justify-content:space-between;align-items:baseline;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
+#hpNum{font-size:20px;font-weight:700}
+#ammo{font-size:20px;font-weight:700}
+#wname{font-size:11px;letter-spacing:.16em;color:var(--ash)}
+#cross{left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px}
+#cross:before,#cross:after{content:"";position:absolute;background:var(--bone);box-shadow:0 0 3px #000}
+#cross:before{left:12px;top:4px;width:2px;height:18px;clip-path:polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%)}
+#cross:after{top:12px;left:4px;height:2px;width:18px;clip-path:polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%)}
+#cross.hit:before,#cross.hit:after{background:#ff5a3a}
+#cross.kill{transform:scale(1.6) rotate(45deg);transition:transform .08s}
+#msg{left:0;right:0;top:24%;text-align:center;font-family:var(--display);font-size:clamp(28px,6vw,54px);color:var(--bone);text-shadow:0 0 18px rgba(255,80,20,.7),0 3px 0 #000;opacity:0;transition:opacity .25s;letter-spacing:.04em}
+#sub{left:0;right:0;top:calc(24% + clamp(40px,8vw,70px));text-align:center;font-size:16px;letter-spacing:.14em;color:var(--gold);text-shadow:0 2px 0 #000;opacity:0;transition:opacity .25s;padding:0 20%}
+#tip{left:50%;transform:translateX(-50%);bottom:calc(74px + var(--sb));background:var(--plate);border:1px solid var(--rim);border-radius:6px;padding:6px 14px;font-size:14px;letter-spacing:.04em;opacity:0;transition:opacity .3s;max-width:60vw;text-align:center}
+#tip b{color:var(--parry);font-weight:600}
+#pop{left:50%;top:50%;transform:translate(24px,-34px);font-size:15px;font-weight:700;color:var(--gold);text-shadow:0 2px 0 #000;opacity:0;transition:opacity .3s}
+#vig{inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(200,0,0,.75) 100%);opacity:0}
+#pflash{inset:0;box-shadow:inset 0 0 90px 30px rgba(80,255,120,.75);opacity:0}
+#lowhp{inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(120,0,0,.55) 100%);opacity:0}
+#obj{margin-top:6px;display:flex;flex-direction:column;gap:3px;max-width:34vw}
+#obj div{font-size:13px;letter-spacing:.03em;line-height:1.25;text-shadow:0 1px 0 #000,0 0 6px #000;padding-left:12px;position:relative}
+#obj div:before{content:"";position:absolute;left:0;top:.45em;width:6px;height:6px;border:1px solid var(--gold);transform:rotate(45deg)}
+#obj div.done{color:var(--ash);text-decoration:line-through}
+#obj div.done:before{background:var(--gold)}
+#mark{left:0;top:0;width:0;height:0;opacity:0;transition:opacity .2s}
+#mark i{position:absolute;left:-9px;top:-9px;width:18px;height:18px;border:2px solid var(--gold);transform:rotate(45deg);box-shadow:0 0 10px rgba(255,196,61,.6)}
+#mark span{position:absolute;left:-30px;top:14px;width:60px;text-align:center;font-size:12px;font-weight:600;color:var(--gold);text-shadow:0 1px 0 #000}
+#mmap{top:calc(54px + var(--st));right:calc(14px + var(--sr));width:112px;height:112px;border-radius:50%;border:2px solid var(--rim);background:rgba(10,6,5,.55)}
+#radio{left:50%;transform:translateX(-50%);top:calc(12px + var(--st));max-width:min(560px,52vw);background:var(--plate);border:1px solid var(--rim);border-left:3px solid var(--gold);border-radius:4px;padding:6px 12px;font-size:14px;line-height:1.3;opacity:0;transition:opacity .3s}
+#radio b{color:var(--gold);font-weight:600;letter-spacing:.06em;margin-right:6px}
+#dialog{position:fixed;left:0;right:0;bottom:0;z-index:9;padding:0 max(16px,var(--sr)) calc(14px + var(--sb)) max(16px,var(--sl));display:flex;justify-content:center;touch-action:manipulation;background:linear-gradient(0deg,rgba(6,3,2,.92),rgba(6,3,2,.6) 70%,transparent)}
+#dialog[hidden]{display:none!important}
+#dialog .box{width:min(760px,100%);padding:18px 4px 6px;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+#dWho{font-family:var(--display);font-size:20px;color:var(--ember);letter-spacing:.05em}
+#dText{font-size:17px;line-height:1.45;min-height:3em;color:var(--bone)}
+#dialog .hint{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.14em;color:var(--ash)}
+#dSkip{font-family:var(--ui);background:none;border:1px solid var(--rim);color:var(--ash);letter-spacing:.14em;font-size:12px;padding:4px 10px;border-radius:3px}
+#loading{position:fixed;inset:0;z-index:30;background:var(--iron);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:var(--ember);letter-spacing:.08em}
+
+/* touch controls */
+#touch{position:absolute;inset:0;pointer-events:none}
+#touch[hidden]{display:none!important}
+.btn{position:absolute;pointer-events:auto;border-radius:50%;background:radial-gradient(circle at 50% 35%,rgba(60,40,34,.75),rgba(16,10,9,.78));border:2px solid var(--rim);color:var(--bone);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--ui);font-weight:600;letter-spacing:.1em;font-size:12px;box-shadow:0 0 0 1px #000,inset 0 0 12px rgba(0,0,0,.6)}
+.btn svg{width:46%;height:46%;margin-bottom:1px}
+.btn.on{background:radial-gradient(circle at 50% 35%,rgba(140,60,20,.85),rgba(40,14,8,.9));border-color:var(--ember)}
+#bFire{right:calc(24px + var(--sr));bottom:calc(30px + var(--sb));width:104px;height:104px;border-color:#a0502a;font-size:13px}
+#bShield{right:calc(140px + var(--sr));bottom:calc(112px + var(--sb));width:76px;height:76px}
+#bShield.on{border-color:var(--parry);background:radial-gradient(circle at 50% 35%,rgba(30,110,50,.85),rgba(8,30,14,.9))}
+#bMelee{right:calc(148px + var(--sr));bottom:calc(18px + var(--sb));width:72px;height:72px}
+#bMelee.exec{border-color:#7fb8ff;box-shadow:0 0 18px 4px rgba(110,170,255,.7);animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.08)}}
+#bDash{right:calc(32px + var(--sr));bottom:calc(152px + var(--sb));width:66px;height:66px}
+#bDash .cd{position:absolute;inset:-2px;border-radius:50%;background:conic-gradient(rgba(0,0,0,.65) var(--cd,0%),transparent 0)}
+.pips{display:flex;gap:3px;margin-top:2px}
+.pips i{width:7px;height:7px;border-radius:50%;background:#3a2a24;border:1px solid #000}
+.pips i.on{background:var(--ember);box-shadow:0 0 5px var(--ember)}
+#joy{position:absolute;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:2px solid rgba(234,223,200,.25);background:rgba(0,0,0,.18);opacity:0;transition:opacity .15s}
+#joy.show{opacity:1}
+#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 50% 35%,rgba(255,150,80,.55),rgba(90,40,20,.6));border:2px solid rgba(255,140,60,.6)}
+#joyHint{left:calc(40px + var(--sl));bottom:calc(40px + var(--sb));width:110px;height:110px;border-radius:50%;border:2px dashed rgba(234,223,200,.18);display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:.12em;color:rgba(234,223,200,.4);text-align:center}
+
+/* screens */
+.screen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;touch-action:manipulation;padding:calc(16px + var(--st)) max(16px,var(--sr)) calc(16px + var(--sb)) max(16px,var(--sl));overflow:auto}
+.screen[hidden]{display:none!important}
+#title{background:linear-gradient(180deg,rgba(10,4,3,.15),rgba(10,4,3,.85) 75%)}
+.dim{background:rgba(8,4,3,.78);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.panel{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:560px;width:100%;text-align:center}
+h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(34px,7.5vw,72px);line-height:1;letter-spacing:.03em;color:var(--bone);text-shadow:0 0 30px rgba(255,80,20,.55),0 4px 0 #3a0a06,0 6px 18px #000;text-wrap:balance}
+h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(28px,5vw,46px);color:var(--bone);text-shadow:0 0 20px rgba(255,80,20,.5),0 3px 0 #000}
+.tag{font-size:14px;letter-spacing:.22em;color:var(--ember);text-transform:uppercase}
+.menu{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.mbtn{font-family:var(--ui);font-size:18px;font-weight:600;letter-spacing:.14em;padding:12px 30px;border-radius:4px;border:2px solid var(--rim);background:linear-gradient(180deg,#3a2620,#1a100d);color:var(--bone);cursor:pointer;min-width:170px}
+.mbtn.main{border-color:var(--ember);background:linear-gradient(180deg,#a0300c,#4a1004);box-shadow:0 0 24px rgba(255,90,20,.35)}
+.mbtn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.mbtn:active{transform:translateY(1px)}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;width:100%;font-size:13px;line-height:1.35;color:var(--ash);text-align:left}
+.how div{background:rgba(20,12,10,.6);border-left:2px solid var(--rim);padding:6px 10px}
+.how b{color:var(--bone);font-weight:600;letter-spacing:.06em;display:block;font-size:12px}
+.how .g b{color:var(--parry)} .how .x b{color:var(--steel)}
+.best{font-size:14px;letter-spacing:.14em;color:var(--gold);font-variant-numeric:tabular-nums}
+.credit{font-size:11px;letter-spacing:.08em;color:var(--ash)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.stats div{background:rgba(20,12,10,.7);border:1px solid #3a2a24;padding:8px}
+.stats small{display:block;font-size:11px;letter-spacing:.16em;color:var(--ash)}
+.stats span{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.set{display:flex;flex-direction:column;gap:12px;width:100%;max-width:380px;text-align:left}
+.set label{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:15px;letter-spacing:.06em}
+.set input[type=range]{width:55%;accent-color:var(--ember)}
+.set input[type=checkbox]{width:22px;height:22px;accent-color:var(--ember)}
+.set select{font-family:var(--ui);font-size:15px;background:#1a100d;color:var(--bone);border:1px solid var(--rim);padding:4px 8px}
+.set small{font-size:12px;color:var(--ash)}
+#rotate{z-index:20;background:var(--iron);flex-direction:column;gap:16px;text-align:center;font-size:18px;letter-spacing:.08em}
+#rotate svg{width:80px;height:80px;animation:rot 1.8s ease-in-out infinite}
+@keyframes rot{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){#rotate svg,#bMelee.exec{animation:none}}
+@media (max-height:420px){h1{font-size:clamp(30px,9vh,52px)} .how{font-size:12px} .panel{gap:9px} .mbtn{padding:9px 24px;font-size:16px}}
+</style>
+
+<div id="loading">Куём доспехи…</div>
+<div id="game" class="menu">
+  <canvas id="c"></canvas>
+  <div class="hud" id="lowhp"></div>
+  <div class="hud" id="vig"></div>
+  <div class="hud" id="pflash"></div>
+  <div class="hud" id="cross"></div>
+  <div class="hud" id="pop"></div>
+  <div class="hud" id="msg"></div>
+  <div class="hud" id="sub"></div>
+  <div class="hud" id="tip"></div>
+  <div class="hud" id="radio"></div>
+  <div class="hud" id="mark"><i></i><span id="markD"></span></div>
+  <canvas class="hud" id="mmap" width="112" height="112" hidden></canvas>
+  <div class="hud" id="topL"><div id="wave">ВОЛНА 1</div><div id="score">0</div><div id="combo">×1</div><div id="obj"></div></div>
+  <div class="hud" id="topR">
+    <button class="chip" data-btn="swap" id="bSwap">⇄ ОРУЖИЕ</button>
+    <button class="chip" data-btn="pause" aria-label="Пауза">❚❚</button>
+  </div>
+  <div class="hud" id="bottomC">
+    <div class="row"><span id="hpNum">100</span><span><span id="wname">КРОМСАТЕЛЬ</span> <span id="ammo">180</span></span></div>
+    <div class="bar" id="hpBar"><i id="hpFill"></i></div>
+    <div class="bar" id="arBar"><i id="arFill"></i></div>
+  </div>
+  <div id="touch" hidden>
+    <div class="hud" id="joyHint">ДВИЖЕНИЕ</div>
+    <div id="joy"><div id="knob"></div></div>
+    <div class="btn" id="bFire" data-btn="fire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>ОГОНЬ</div>
+    <div class="btn" id="bShield" data-btn="shield"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></svg>ЩИТ</div>
+    <div class="btn" id="bMelee" data-btn="melee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="8" r="4"/><path d="M13 11l-9 9M18 3l1-2M21 6l2-1M13 5l-1-2"/></svg><span id="mLabel">ЦЕП</span><div class="pips" id="pips"><i></i><i></i><i></i></div></div>
+    <div class="btn" id="bDash" data-btn="dash"><div class="cd" id="dashCd"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h12M12 6l6 6-6 6M2 8h5M2 16h5"/></svg>РЫВОК</div>
+  </div>
+</div>
+
+<div class="screen" id="title" hidden>
+  <div class="panel">
+    <div class="tag">Осада Преисподней</div>
+    <h1>Железный Палач</h1>
+    <div class="menu">
+      <button class="mbtn main" id="storyBtn">ИСТОРИЯ</button>
+      <button class="mbtn main" id="playBtn">АРЕНА</button>
+      <button class="mbtn" id="newStoryBtn" hidden>НОВАЯ ИСТОРИЯ</button>
+      <button class="mbtn" id="setBtn">НАСТРОЙКИ</button>
+    </div>
+    <div class="best" id="bestT"></div>
+    <div class="how">
+      <div><b>ДВИЖЕНИЕ</b>левый палец в любом месте левой половины</div>
+      <div><b>ОБЗОР</b>правый палец, тянуть можно и по кнопкам</div>
+      <div class="g"><b>ЗЕЛЁНЫЙ СНАРЯД</b>подними ЩИТ в момент удара, и он полетит обратно</div>
+      <div class="x"><b>СИНЕЕ СВЕЧЕНИЕ</b>враг оглушён: жми ЦЕП для казни и здоровья</div>
+      <div><b>РЫВОК ЩИТОМ</b>таранит врага в прицеле и не даёт урона</div>
+      <div><b>ЦЕП</b>убийства цепом дают патроны, тараном броню</div>
+    </div>
+    <div class="credit">Музыка (CC0, OpenGameArt): «Heavy Battle 2» MintoDog · «Boss Battle #6» и «Boss Battle #2» nene · «Determined Pursuit» Emma_MA · «Abandoned Passages» congusbongus</div>
+  </div>
+</div>
+
+<div class="screen dim" id="pause" hidden>
+  <div class="panel">
+    <h2>Пауза</h2>
+    <div class="menu">
+      <button class="mbtn main" id="resumeBtn">ПРОДОЛЖИТЬ</button>
+      <button class="mbtn" id="pSetBtn">НАСТРОЙКИ</button>
+      <button class="mbtn" id="quitBtn">В МЕНЮ</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen dim" id="settings" hidden>
+  <div class="panel">
+    <h2>Настройки</h2>
+    <div class="set">
+      <label for="sSens">Чувствительность <input type="range" id="sSens" min="0.3" max="2.5" step="0.05"></label>
+      <label for="sAssist">Помощь в прицеливании <input type="checkbox" id="sAssist"></label>
+      <label for="sMusic">Музыка <input type="checkbox" id="sMusic"></label>
+      <label for="sShake">Тряска экрана <input type="checkbox" id="sShake"></label>
+      <label for="sFps">Экономный режим 30 FPS <input type="checkbox" id="sFps"></label>
+      <label for="sQuality">Графика
+        <select id="sQuality"><option value="auto">Авто</option><option value="low">Низкая</option><option value="med">Средняя</option><option value="high">Высокая</option></select>
+      </label>
+      <small id="qInfo">Смена графики перезапускает игру.</small>
+    </div>
+    <button class="mbtn main" id="setBack">ГОТОВО</button>
+  </div>
+</div>
+
+<div class="screen dim" id="over" hidden>
+  <div class="panel">
+    <div class="tag" id="overTag">Палач пал</div>
+    <h2 id="overTitle">Ад торжествует</h2>
+    <div class="stats">
+      <div><small id="oWaveL">ВОЛНА</small><span id="oWave">1</span></div>
+      <div><small>УБИТО</small><span id="oKills">0</span></div>
+      <div><small id="oScoreL">ОЧКИ</small><span id="oScore">0</span></div>
+    </div>
+    <div class="best" id="oBest"></div>
+    <div class="menu">
+      <button class="mbtn main" id="againBtn">ЕЩЁ РАЗ</button>
+      <button class="mbtn" id="menuBtn">В МЕНЮ</button>
+    </div>
+  </div>
+</div>
+
+<div id="dialog" hidden><div class="box" id="dBox"><div id="dWho"></div><div id="dText"></div><div class="hint"><span>КОСНИСЬ, ЧТОБЫ ПРОДОЛЖИТЬ</span><button id="dSkip">ПРОПУСТИТЬ</button></div></div></div>
+
+<div class="screen" id="rotate" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="#ff7a1a" stroke-width="1.6"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+  Поверни телефон горизонтально
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

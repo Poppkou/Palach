@@ -1,0 +1,6 @@
+{
+  "appId": "com.poppkou.palach",
+  "appName": "Железный Палач",
+  "webDir": "www",
+  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false, "backgroundColor": "#120d0c" }
+}
